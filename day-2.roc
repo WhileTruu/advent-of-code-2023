@@ -1,27 +1,26 @@
 app "day-2"
     packages {
         pf: "https://github.com/roc-lang/basic-cli/releases/download/0.7.0/bkGby8jb0tmZYsy2hg1E_B2QrCgcSTxdUlHtETwm5m4.tar.br",
-        parser: "https://github.com/lukewilliamboswell/roc-parser/releases/download/0.3.0/-e3ebWWmlFPfe9fYrr2z1urfslzygbtQQsl69iH1qzQ.tar.br",
+        parser: "./parser/package/main.roc",
     }
     imports [
         pf.Stdout,
         pf.Task.{ Task },
-        parser.Core,
-        parser.String,
+        parser.ParserCore,
+        parser.ParserStr,
         "day-2-input.txt" as inputData : Str,
     ]
     provides [main] to pf
 
 main : Task {} *
 main =
-    output =
-        inputData |> calculate
+    output = inputData |> calculate
 
     Stdout.line ("part 1: \(Num.toStr output.p1), part 2: \(Num.toStr output.p2)")
 
 calculate = \input ->
     List.walk (Str.split input "\n") { p1: 0, p2: 0 } \state, line ->
-        Core.const \id -> \revealed ->
+        ParserCore.const \id -> \revealed ->
                 possible =
                     List.all (List.join revealed) \a ->
                         when a is
@@ -41,27 +40,37 @@ calculate = \input ->
                     p1: if possible then state.p1 + id else state.p1,
                     p2: state.p2 + powerOfMinSetCubes,
                 }
-        |> Core.skip (String.string "Game ")
-        |> Core.keep String.digits
-        |> Core.skip (String.string ": ")
-        |> Core.keep
+        |> ParserCore.skip (ParserStr.string "Game ")
+        |> ParserCore.keep parserStrNat
+        |> ParserCore.skip (ParserStr.string ": ")
+        |> ParserCore.keep
             (
-                Core.oneOf [
-                    Core.const (\num -> (num, Green))
-                    |> Core.keep String.digits
-                    |> Core.skip (String.string " green"),
-                    Core.const (\num -> (num, Red))
-                    |> Core.keep String.digits
-                    |> Core.skip (String.string " red"),
-                    Core.const (\num -> (num, Blue))
-                    |> Core.keep String.digits
-                    |> Core.skip (String.string " blue"),
+                ParserCore.oneOf [
+                    ParserCore.const \num -> (num, Green)
+                    |> ParserCore.keep parserStrNat
+                    |> ParserCore.skip (ParserStr.string " green"),
+                    ParserCore.const \num -> (num, Red)
+                    |> ParserCore.keep parserStrNat
+                    |> ParserCore.skip (ParserStr.string " red"),
+                    ParserCore.const \num -> (num, Blue)
+                    |> ParserCore.keep parserStrNat
+                    |> ParserCore.skip (ParserStr.string " blue"),
                 ]
-                |> Core.sepBy (String.string ", ")
-                |> Core.sepBy (String.string "; ")
+                |> ParserCore.sepBy (ParserStr.string ", ")
+                |> ParserCore.sepBy (ParserStr.string "; ")
             )
-        |> String.parseStr line
+        |> ParserStr.parseStr line
         |> Result.withDefault state
+
+parserStrNat : ParserCore.Parser (List U8) Nat
+parserStrNat =
+    ParserCore.oneOrMore (ParserStr.digit |> ParserCore.map \a -> Num.toNat (a - '0'))
+    |> ParserCore.map \digits ->
+        List.walk digits 0 \sum, digit -> sum * 10 + digit
+
+expect
+    result = ParserStr.parseStr parserStrNat "100"
+    result == Ok 100
 
 exampleInput =
     """
@@ -73,3 +82,4 @@ exampleInput =
     """
 
 expect (calculate exampleInput) == { p1: 8, p2: 2286 }
+
