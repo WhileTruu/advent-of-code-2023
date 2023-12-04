@@ -20,15 +20,17 @@ calculate = \input ->
     |> Str.split "\n"
     |> List.map \line ->
         line
-        |> Str.replaceFirst "Card " ""
+        |> Str.replaceFirst "Card" ""
         |> Str.split ": "
         |> List.map \a -> Str.split a " | "
         |> List.join
     |> List.keepOks \cardContents ->
         when cardContents is
             [cardNum, winningNumbers, numbersYouHave] ->
+                cardNum1 <- Result.try ((Str.toNat (Str.trim cardNum)))
+
                 Ok {
-                    cardNum: cardNum,
+                    cardNum: cardNum1,
                     winning: Str.split winningNumbers " "
                     |> List.map \a -> Str.trim a
                     |> List.dropIf \a -> Str.isEmpty a
@@ -39,12 +41,33 @@ calculate = \input ->
                     |> List.keepOks \a -> Str.toNat a,
                 }
 
-            _ -> Err {}
-    |> List.map \{ winning, numbers } ->
-        numbers
-        |> List.walk 0 \state, num ->
-            if List.contains winning num then Num.max 1 (state * 2) else state
-    |> List.sum
+            _ -> 
+                Err Yolo
+    |> \cards ->
+        calc cards (List.len cards) cards
+
+calc = \queue, numWon, all ->
+    when queue is
+        [{ cardNum, winning, numbers }, ..] ->
+            dbg (cardNum, numWon)
+            numWon1 =
+                numbers
+                |> List.walk 0 \state, num ->
+                    if List.contains winning num then state + 1 else state
+
+            newOnes =
+                all
+                |> List.sublist { start: cardNum, len: numWon1 }
+
+            newQueue = queue |> List.dropFirst 1
+              
+            numWon +
+            numWon1 +
+            calc newQueue 0 all +
+            calc newOnes 0 all
+
+        _ ->
+            numWon
 
 exampleInput =
     """
