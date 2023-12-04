@@ -27,7 +27,7 @@ calculate = \input ->
     |> List.keepOks \cardContents ->
         when cardContents is
             [cardNum, winningNumbers, numbersYouHave] ->
-                cardNum1 <- Result.try ((Str.toNat (Str.trim cardNum)))
+                cardNum1 <- Result.try (Str.toNat (Str.trim cardNum))
 
                 Ok {
                     cardNum: cardNum1,
@@ -41,33 +41,29 @@ calculate = \input ->
                     |> List.keepOks \a -> Str.toNat a,
                 }
 
-            _ -> 
+            _ ->
                 Err Yolo
+    |> List.map \{ winning, numbers } ->
+        numbers
+        |> List.walk 0 \a, num ->
+            if List.contains winning num then
+                a + 1
+            else
+                a
     |> \cards ->
-        calc cards (List.len cards) cards
+        calc { s: 0, e: List.len cards } (List.len cards) cards
 
-calc = \queue, numWon, all ->
-    when queue is
-        [{ cardNum, winning, numbers }, ..] ->
-            dbg (cardNum, numWon)
-            numWon1 =
-                numbers
-                |> List.walk 0 \state, num ->
-                    if List.contains winning num then state + 1 else state
-
-            newOnes =
-                all
-                |> List.sublist { start: cardNum, len: numWon1 }
-
-            newQueue = queue |> List.dropFirst 1
-              
-            numWon +
-            numWon1 +
-            calc newQueue 0 all +
-            calc newOnes 0 all
-
-        _ ->
-            numWon
+calc = \{ s, e }, sum, all ->
+    if s >= e then
+        sum
+    else
+        when List.get all s is
+            Err _ -> sum
+            Ok cardWins ->
+                sum
+                + cardWins
+                + calc { s: s + 1, e: e } 0 all
+                + calc { s: s + 1, e: s + cardWins } 0 all
 
 exampleInput =
     """

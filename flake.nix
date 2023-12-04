@@ -18,7 +18,7 @@
           # sha256 = "0pkb0d0bdplk9shhcd1imm3fphvkbw23bx7a7zmc2gsp6845wx1n";
           
           url = "https://github.com/roc-lang/roc/releases/download/nightly/roc_nightly-macos_apple_silicon-latest.tar.gz";
-          sha256 = "06k0hx2b1rn1hx7wyp8ay4l7bidkgsqx8m8sh7ck78hskmahkagg";
+          sha256 = "1jf66kk7lnhzn558ssvzkjgv9sq6vcf2js6r7xzlf8z4hcliy52c";
 
 
         };
