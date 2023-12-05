@@ -6,14 +6,19 @@ app "day-2"
     imports [
         pf.Stdout,
         pf.Task.{ Task },
-        "day-4-input.txt" as inputData : Str,
+        pf.Utc,
+        "day-4-b.sample-data.txt" as inputData : Str,
     ]
     provides [main] to pf
 
 main : Task {} *
 main =
+    start <- Task.await Utc.now
     a = calculate inputData
-    Stdout.line "\(Num.toStr a)"
+    _ <- Task.await (Stdout.line "\(Num.toStr a)")
+    end <- Task.await Utc.now
+
+    Stdout.line "\(Num.toStr (Utc.deltaAsMillis start end))"
 
 calculate = \input ->
     input
@@ -54,7 +59,7 @@ calculate = \input ->
         calc { s: 0, e: List.len cards } (List.len cards) cards
 
 calc = \{ s, e }, sum, all ->
-    if s >= e then
+    if s > e then
         sum
     else
         when List.get all s is
