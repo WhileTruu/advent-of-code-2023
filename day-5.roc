@@ -14,8 +14,11 @@ app "day-2"
 main : Task {} *
 main =
     start <- Task.await Utc.now
-    lowestLocNumStr = findLowestLocNum exampleInput
+    lowestLocNumStr = findLowestLocNum inputData
         |> Result.map (\a -> Num.toStr a)
+        |> \a ->
+            dbg a
+            a
         |> Result.withDefault "fail"
     end <- Task.await Utc.now
     _ <- Task.await (Stdout.line "answer \(lowestLocNumStr)")
@@ -35,29 +38,33 @@ findLowestLocNum = \input ->
         |> List.keepOks \a -> 
             when a is
                 [start, len] ->
-                    Ok (List.range { start: At start, end: Length len })
+                    Ok (start, start + len)
                 _ ->
                     Err Yolo
+        |> List.walk [] \state, (s1, e1) ->
+            state
+            |> List.findFirst \(s2, e2) ->
+                s1 >= s2 && s1 <= e2 || e1 >= s2 && e1 <= e2
+            |> Result.map \(s2, e2) ->
+                dbg "hello found"
+                List.append state (Num.min s1 s2, Num.max e1 e2)
+            |> Result.withDefault (List.append state (s1, e1))
+            |> \a ->
+                dbg a
+                a
+        |> List.map \(start, end) ->
+            List.range { start: At start, end: At end }
         |> List.join
-        |> \a ->
-            dbg a
-            a
-        |> \a ->
-            [82]
-        
+    max = List.len seeds 
+    dbg ("len", List.len seeds)
     
     conversionMaps <- inputParts 
         |> List.dropFirst 1
         |> List.walk (Ok []) \state, rawConversionMap ->
-            headerLine <- 
-                Str.split rawConversionMap "\n"
-                |> List.get 0
-                |> Result.map \a -> Str.replaceFirst a " map:" ""
-                |> Result.try 
-
             conversionMapLines <- 
                 Str.split rawConversionMap "\n"
                 |> List.dropFirst 1
+                # Comment the next line line out when running example
                 |> List.dropLast 1
                 |> List.walk (Ok []) \state1, a ->
                     when Str.split a " " is
@@ -75,25 +82,29 @@ findLowestLocNum = \input ->
 
 
            
-            state |> Result.map (\a -> List.append a (headerLine, conversionMapLines))
+            state |> Result.map (\a -> List.append a conversionMapLines)
         |> Result.try
-            
-    conversionMaps
-    |> List.walk seeds \state, conversionMap ->
-         state
-         |> List.map \a -> appleSauce a conversionMap
-    |> List.min
-    
+           
+    dbg "conversionmaps done"
 
-appleSauce : Nat, (Str, List { src : Nat, dst : Nat, len : Nat }) -> Nat
-appleSauce = \val, (line, conversionMap) ->
+    seeds
+    |> List.walk (0, 9999999999) \(i, state), seed ->
+        conversionMaps
+        |> List.walk (seed) \state1, conversionMap ->
+            appleSauce state1 conversionMap
+        |> \a -> 
+            dbg ("min", (i, max), Num.min state a)
+            (i + 1, Num.min state a)
+    |> \(_, a) -> Ok a
+
+       
+
+appleSauce : Nat, List { src : Nat, dst : Nat, len : Nat } -> Nat
+appleSauce = \val, conversionMap ->
     conversionMap 
     |> List.findFirst \{ src, dst, len } -> val >= src && val <= (src + len) 
     |> Result.map \{ src, dst, len } -> dst + val - src
     |> Result.withDefault val
-    |> \a ->
-        dbg (line, val, a)
-        a
 
 
 exampleInput =
