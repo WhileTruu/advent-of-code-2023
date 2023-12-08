@@ -15,13 +15,10 @@ main : Task {} *
 main =
     start <- Task.await Utc.now
 
-    result = 
-        katie 
-            exampleInputLeftOrRightInstructions 
-            exampleInputNetworkOfLabeledNodes 
-            0 
-            "AAA"
-       
+    { networks, instructions } = parseInput inputData
+
+    result =
+        katie instructions networks 0 "AAA"
 
     end <- Task.await Utc.now
     _ <- Task.await (Stdout.line "answer \(Num.toStr result)")
@@ -31,34 +28,58 @@ main =
 katie = \instructions, network, steps, labeledNode ->
     idx = steps % (Str.countGraphemes instructions)
 
-    leftOrRight = 
+    leftOrRight =
         List.get (Str.graphemes instructions) idx
         |> Result.withDefault "L"
 
     nextLabeledNode =
         when leftOrRight is
-            "L" -> 
+            "L" ->
                 Dict.get network labeledNode
                 |> Result.map \a -> a.0
                 |> Result.withDefault "ZZZ"
+
             "R" ->
                 Dict.get network labeledNode
                 |> Result.map \a -> a.1
                 |> Result.withDefault "ZZZ"
+
             _ ->
                 "ZZZ"
-    
-    if nextLabeledNode == "ZZZ" then 
-        steps + 1  
+
+    if nextLabeledNode == "ZZZ" then
+        steps + 1
     else
-        katie instructions network (steps + 1) nextLabeledNode 
-            
+        katie instructions network (steps + 1) nextLabeledNode
 
-exampleInputLeftOrRightInstructions = "LLR"
+parseInput = \str ->
+    when Str.split str "\n\n" is
+        [instructions, otherStuff] ->
+            networks =
+                otherStuff
+                |> Str.split "\n"
+                |> List.map \a ->
+                    a
+                    |> Str.replaceFirst " = (" ","
+                    |> Str.replaceFirst ", " ","
+                    |> Str.replaceFirst ")" ""
+                    |> Str.split ","
+                |> List.walk (Dict.empty {}) \state, line ->
+                    when line is
+                        [a, b, c] -> Dict.insert state a (b, c)
+                        _ -> state
 
-exampleInputNetworkOfLabeledNodes =
-    Dict.empty {}
-    |> Dict.insert "AAA" ("BBB", "BBB")
-    |> Dict.insert "BBB" ("AAA", "ZZZ")
-    |> Dict.insert "ZZZ" ("ZZZ", "ZZZ")
+            { instructions, networks }
+
+        _ ->
+            { instructions: "", networks: Dict.empty {} }
+
+exampleInput =
+    """
+    LLR
+
+    AAA = (BBB, BBB)
+    BBB = (AAA, ZZZ)
+    ZZZ = (ZZZ, ZZZ)
+    """
 
