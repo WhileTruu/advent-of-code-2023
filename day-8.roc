@@ -18,7 +18,14 @@ main =
     { networks, instructions } = parseInput inputData
 
     result =
-        katie instructions networks 0 "AAA"
+        networks
+        |> Dict.keys
+        |> List.keepIf \a -> Str.endsWith a "A"
+        |> List.map \a -> katie instructions networks 0 a
+        |> \a -> 
+            dbg a
+            a
+        |> lcms
 
     end <- Task.await Utc.now
     _ <- Task.await (Stdout.line "answer \(Num.toStr result)")
@@ -47,7 +54,7 @@ katie = \instructions, network, steps, labeledNode ->
             _ ->
                 "ZZZ"
 
-    if nextLabeledNode == "ZZZ" then
+    if Str.endsWith nextLabeledNode "Z" then
         steps + 1
     else
         katie instructions network (steps + 1) nextLabeledNode
@@ -74,12 +81,34 @@ parseInput = \str ->
         _ ->
             { instructions: "", networks: Dict.empty {} }
 
+gcd = \a, b -> if b == 0 then a else gcd b (a % b)
+
+lcm = \a, b ->
+    if a == 0 && b == 0 then
+        0
+    else
+        b * (a // (gcd a b))
+
+lcms = \s ->
+    lcmsHelp 1 s
+
+lcmsHelp = \state, s ->
+    when s is
+        [x1] -> lcm x1 state
+        [x1, ..] -> lcmsHelp (lcm x1 state) (List.dropFirst s 1)
+        [] -> 1
+
 exampleInput =
     """
-    LLR
+    LR
 
-    AAA = (BBB, BBB)
-    BBB = (AAA, ZZZ)
-    ZZZ = (ZZZ, ZZZ)
+    11A = (11B, XXX)
+    11B = (XXX, 11Z)
+    11Z = (11B, XXX)
+    22A = (22B, XXX)
+    22B = (22C, 22C)
+    22C = (22Z, 22Z)
+    22Z = (22B, 22B)
+    XXX = (XXX, XXX)
     """
 

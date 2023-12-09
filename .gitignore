@@ -1,2 +1,4 @@
 .direnv
 .envrc
+.DS_STORE
+inputs
