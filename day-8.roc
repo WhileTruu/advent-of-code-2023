@@ -22,8 +22,10 @@ main =
         |> Dict.keys
         |> List.keepIf \a -> Str.endsWith a "A"
         |> List.map \a -> katie instructions networks 0 a
-        |> \a -> 
-            dbg a
+        |> \a ->
+            dbg
+                a
+
             a
         |> lcms
 
