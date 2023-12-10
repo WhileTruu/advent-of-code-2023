@@ -15,12 +15,11 @@ main : Task {} *
 main =
     start <- Task.await Utc.now
 
-    result = 
+    result =
         inputData
         |> Str.split "\n"
         |> List.map (\a -> Str.split a " " |> List.keepOks Str.toI128)
         |> List.walk 0 \state, a -> state + predict a
-            
 
     end <- Task.await Utc.now
     _ <- Task.await (Stdout.line "answer \(Num.toStr result)")
@@ -30,32 +29,30 @@ main =
 predict = \values ->
     sequences = \state, a ->
         diffs = differences a
-        
-        if List.all diffs \value -> value == 0 then 
-            state |> List.append a |> List.append diffs 
+
+        if List.all diffs \value -> value == 0 then
+            state |> List.append a |> List.append diffs
         else
             sequences (List.append state a) diffs
-    
+
     sequences [] values
     |> List.walkBackwards 0 \state, diffs ->
         when diffs is
-            [.., a] -> state + a
+            [a, ..] -> a - state
             _ -> state
-                
 
 expect
-    result = predict [0, 3, 6, 9, 12, 15]
-    result == 18
-
+    result = predict [10, 13, 16, 21, 30, 45]
+    result == 5
 
 differences = \values ->
     values
     |> List.walk [] \state, a ->
         when state is
             [] -> [a]
-            [.., a1] -> 
-                state 
-                |> List.dropLast 1 
+            [.., a1] ->
+                state
+                |> List.dropLast 1
                 |> List.append (a - a1)
                 |> List.append a
     |> List.dropLast 1
