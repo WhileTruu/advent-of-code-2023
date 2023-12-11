@@ -17,8 +17,18 @@ main : Task {} *
 main =
     start <- Task.await Utc.now
 
+    result =
+        inputData
+        |> calculate
+
+    end <- Task.await Utc.now
+    _ <- Task.await (Stdout.line "answer \(Num.toStr result)")
+
+    Stdout.line "delta \(Num.toStr (Utc.deltaAsMillis start end))"
+
+calculate = \input ->
     data =
-        inputData 
+        input
         |> Str.trim
         |> Str.split "\n"
         |> List.map Str.graphemes
@@ -32,14 +42,11 @@ main =
     findEmptySpaceListIndex = \array2D ->
         array2D
         |> Array2D.toLists
-        |> List.walkWithIndex
-            []
-            (\state, list, index ->
-                if List.all list \a -> a == "." then
-                    List.append state index
-                else
-                    state
-            )
+        |> List.walkWithIndex [] \state, list, index ->
+            if List.all list \a -> a == "." then
+                List.append state index
+            else
+                state
 
     emptyCols =
         data
@@ -52,57 +59,64 @@ main =
 
     galaxyIndices =
         data
-        |> Array2D.walk
-            []
-            { direction: Forwards }
-            \state, grapheme, index ->
-                if grapheme == "#" then
-                    List.append state index
-                else
-                    state
-    
+        |> Array2D.walk [] { direction: Forwards } \state, grapheme, index ->
+            if grapheme == "#" then
+                List.append state index
+            else
+                state
+
     # 7611654 - too LOW
+    # 7687929 - also too LOW
+    # 7611654
+    # 7639230
 
-    result = sumOfShortesPathBetweenAllGalaxyPairs emptyCols emptyRows galaxyIndices
-
-    end <- Task.await Utc.now
-    _ <- Task.await (Stdout.line "answer \(Num.toStr result)")
-
-    Stdout.line "delta \(Num.toStr (Utc.deltaAsMillis start end))"
+    sumOfShortesPathBetweenAllGalaxyPairs emptyCols emptyRows galaxyIndices
 
 sumOfShortesPathBetweenAllGalaxyPairs = \emptyX, emptyY, indices ->
-    List.walk indices [] \state, index ->
+    indices
+    |> List.walk [] \state, index ->
         indices
-        |> List.dropIf \a -> a == index
-        |> List.walk [] \otherState, otherIndex ->
-            dist = 
-                Num.absDiff index.x otherIndex.x
-                + Num.absDiff index.y otherIndex.y
-                + (List.walk emptyX 0 \s, x ->
-                    if (index.x < x && x < otherIndex.x)
-                        || (otherIndex.x < x && x < index.x)
-                    then s + 1
-                    else s
-                  )
-                + (List.walk emptyY 0 \s, y ->
-                    if (index.y < y && y < otherIndex.y)
-                        || (otherIndex.y < y && y < index.y)
-                    then s + 1
-                    else s
-                  )
-            
+        |> List.walk state \otherState, otherIndex ->
             isInState = \s, iA, iB ->
-               List.any s \a -> 
-                   a.0 == iA && a.1 == iB 
-                   || a.0 == iB && a.1 == iA 
-            
-            if isInState state index otherIndex then
-                otherState 
-            else
-                List.append otherState (index, otherIndex, dist)
-        |> \a -> List.concat state a 
-    |> List.walk 0 \state, a -> state + a.2
+                List.any s \a ->
+                    (a.0 == iA && a.1 == iB)
+                    || (a.0 == iB && a.1 == iA)
 
+            if index == otherIndex || isInState state index otherIndex then
+                otherState
+            else
+                expansionXCount = List.walk emptyX 0 \s, x ->
+                    if
+                        (index.x < x && x < otherIndex.x)
+                        || (otherIndex.x < x && x < index.x)
+                    then
+                        s + 1
+                    else
+                        s
+
+                expansionYCount = List.walk emptyY 0 \s, y ->
+                    if
+                        (index.y < y && y < otherIndex.y)
+                        || (otherIndex.y < y && y < index.y)
+                    then
+                        s + 1
+                    else
+                        s
+
+                xDist = Num.absDiff index.x otherIndex.x + 999999 * expansionXCount
+                yDist = Num.absDiff index.y otherIndex.y + 999999 * expansionYCount
+
+                # carthesianDist =
+                #    Num.sqrt
+                #        (
+                #            Num.pow (Num.toF64 xDist) 2
+                #            + Num.pow (Num.toF64 yDist) 2
+                #        )
+                #    |> Num.round
+
+                List.append otherState (index, otherIndex, xDist + yDist)
+    |> List.walk 0 \state, a ->
+        state + a.2
 
 exampleInput =
     """
@@ -117,3 +131,50 @@ exampleInput =
     .......#..
     #...#.....
     """
+
+expect
+    result = calculate exampleInput
+
+    result == 374
+
+expect
+    result =
+        """
+        #..
+        ...
+        ..#
+        """
+        |> calculate
+
+    result == 6
+
+expect
+    result =
+        """
+        ......
+        ....#.
+        .#....
+        ......
+        """
+        |> calculate
+
+    result == 6
+
+expect
+    result = calculate "...##...."
+    result == 1
+
+expect
+    result =
+        """
+        #
+        .
+        .
+        .
+        #
+        """
+        |> calculate
+
+    result == 7
+
+expect calculate "#...#" == 7
