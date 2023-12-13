@@ -50,7 +50,9 @@ calculateArrangements = \line ->
     getArrangementCount [(row, contiguousGroupOfDamagedSprings)] 0
 
 getArrangementCount = \list, state ->
-    dbg (List.len list)
+    dbg
+        List.len list
+
     when list is
         [] -> state
         [a, ..] ->
@@ -69,7 +71,7 @@ getArrangementCount = \list, state ->
                             (
                                 list
                                 |> List.dropFirst 1
-                                |> List.append (
+                                |> List.prepend (
                                     a.0
                                     |> List.dropFirst (contiguousGroupOfDamagedSprings + 1),
                                     a.1 |> List.dropFirst 1,
@@ -119,15 +121,32 @@ exampleInput =
     ????.######..#####. 1,6,5
     ?###???????? 3,2,1
     """
+
+expect
+    result = calculateArrangements "???.### 1,1,3"
+    result == 1
+
+# expect
+#    result = calculateArrangements ".??..??...?##. 1,1,3"
+#    result == 16384
+
 expect
     result = calculateArrangements "?#?#?#?#?#?#?#? 1,3,1,6"
+    result == 1
+
+expect
+    result = calculateArrangements "????.#...#... 4,1,1"
+    result == 16
+
+expect
+    result = calculateArrangements ".# 1"
     result == 1
 
 # expect
 #     result = exampleInput |> Str.trim |> Str.split "\n" |> List.walk 0 \state, a -> state + calculateArrangements a |> \a -> [a]
 #    result == [1, 4, 1, 1, 4, 10]
 
-expect
-    x = calculateArrangements "?###???????? 3,2,1"
-    x == 10
+# expect
+#    x = calculateArrangements "?###???????? 3,2,1"
+#    x == 10
 
