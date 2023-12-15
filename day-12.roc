@@ -50,7 +50,7 @@ calculateArrangements = \line ->
     getArrangementCount [(row, contiguousGroupOfDamagedSprings)] 0
 
 getArrangementCount = \list, state ->
-    dbg
+    dbg 
         List.len list
 
     when list is
@@ -64,53 +64,49 @@ getArrangementCount = \list, state ->
                         getArrangementCount (List.dropFirst list 1) (state + 1)
 
                 [contiguousGroupOfDamagedSprings, ..] ->
-                    if List.isEmpty a.0 then
-                        getArrangementCount (List.dropFirst list 1) state
-                    else if fits2 a.0 contiguousGroupOfDamagedSprings then
-                        getArrangementCount
-                            (
-                                list
-                                |> List.dropFirst 1
-                                |> List.prepend (
-                                    a.0
-                                    |> List.dropFirst (contiguousGroupOfDamagedSprings + 1),
-                                    a.1 |> List.dropFirst 1,
+                    when List.findFirstIndex a.0 \s -> s == "?" || s == "#" is
+                        Ok firstPossibleIndex ->
+                            possibleGroup = List.sublist a.0 {
+                                start: firstPossibleIndex,
+                                len: contiguousGroupOfDamagedSprings,
+                            }
+
+                            if List.len possibleGroup != contiguousGroupOfDamagedSprings then
+                                getArrangementCount (List.dropFirst list 1) state
+                            else if
+                                (List.all possibleGroup \s -> s == "#" || s == "?")
+                                && (
+                                    List.get a.0 (firstPossibleIndex + contiguousGroupOfDamagedSprings)
+                                    != Ok "#"
                                 )
-                                |> if List.get a.0 0 != Ok "#" then
-                                    \list1 -> List.prepend list1 (
-                                            a.0 |> List.dropFirst 1,
-                                            a.1,
+                            then
+                                getArrangementCount
+                                    (
+                                        list
+                                        |> List.dropFirst 1
+                                        |> List.prepend (
+                                            List.dropFirst a.0 (firstPossibleIndex + contiguousGroupOfDamagedSprings + 1),
+                                            List.dropFirst a.1 1,
                                         )
-                                else
-                                    \list1 -> list1
-                            )
-                            state
-                    else
-                        getArrangementCount
-                            (
-                                list
-                                |> List.dropFirst 1
-                                |> if List.get a.0 0 != Ok "#" then
-                                    \list1 -> List.prepend list1 (
-                                            a.0 |> List.dropFirst 1,
-                                            a.1,
-                                        )
-                                else
-                                    \list1 -> list1
+                                        |> \list1 ->
+                                            if List.get a.0 firstPossibleIndex != Ok "#" then
+                                                List.prepend list1 (
+                                                    List.dropFirst a.0 (firstPossibleIndex + 1),
+                                                    a.1,
+                                                )
+                                            else
+                                                list1
+                                    )
+                                    state
+                            else if List.get a.0 firstPossibleIndex == Ok "#" then
+                                getArrangementCount (List.dropFirst list 1) state
+                            else
+                                getArrangementCount
+                                    (List.dropFirst list (firstPossibleIndex + 1))
+                                    state
 
-                            )
-                            state
-
-fits2 = \springs, n ->
-    springs
-    |> List.takeFirst n
-    |> List.map \a -> if a == "?" then "#" else a
-    |> \a -> (Str.joinWith a "" == (List.repeat "#" n |> Str.joinWith ""))
-        && (
-            (List.get springs n == Ok "?")
-            || (List.get springs n == Ok ".")
-            || (Result.isErr (List.get springs n))
-        )
+                        Err _ ->
+                            getArrangementCount (List.dropFirst list 1) state
 
 exampleInput =
     """
@@ -126,9 +122,9 @@ expect
     result = calculateArrangements "???.### 1,1,3"
     result == 1
 
-# expect
-#    result = calculateArrangements ".??..??...?##. 1,1,3"
-#    result == 16384
+expect
+    result = calculateArrangements ".??..??...?##. 1,1,3"
+    result == 16384
 
 expect
     result = calculateArrangements "?#?#?#?#?#?#?#? 1,3,1,6"

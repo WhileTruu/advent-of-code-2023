@@ -16,34 +16,99 @@ app "day-13"
 main : Task {} *
 main =
     start <- Task.await Utc.now
-
-    result = calculate inputData |> Num.toStr
+    result = calculateP2 inputData |> Num.toStr
 
     end <- Task.await Utc.now
 
     _ <- Task.await (Stdout.line "result \(result)")
     Stdout.line "delta \(Num.toStr (Utc.deltaAsMillis start end))"
 
-calculate = \input ->
+
+calculateP2 = \input ->
     input
     |> Str.trim
     |> Str.split "\n"
     |> List.map Str.graphemes
     |> Array2D.fromLists FitShortest
-    |> rollRocksToNorth
+    |> Array2D.rotateClockwise
+    |> runCycles 1000
+    |> Array2D.rotateClockwise
+    |> rollRocksToTheRight
+    |> Array2D.toLists
+    |> \a -> 
+        dbg 
+            (a |> List.map (\a1 -> Str.joinWith a1 "") |> Str.joinWith "\n")
+        a
+    |> List.walkWithIndex 0 \state, line, index ->
+        state + ((index + 1) * List.countIf line \a -> a == "O")
+
+
+runCycles = \input, n -> runCyclesHelp input n 0
+
+# north, then west, then south, then east.
+runCyclesHelp = \input, state, n ->
+    if n < state then
+        input 
+        |> rollRocksToTheRight
+        |> Array2D.rotateClockwise
+        |> rollRocksToTheRight
+        |> Array2D.rotateClockwise
+        |> rollRocksToTheRight
+        |> Array2D.rotateClockwise
+        |> rollRocksToTheRight
+        |> \x ->
+            something =
+                x 
+                |> Array2D.rotateClockwise
+                |> Array2D.rotateClockwise
+                |> rollRocksToTheRight
+                |> Array2D.toLists 
+                |> List.map (\a1 -> Str.joinWith a1 "") 
+                |> Str.joinWith "\n"
+
+            # dbg something
+                
+            dbg 
+                x
+                |> Array2D.rotateClockwise
+                |> Array2D.rotateClockwise
+                |> rollRocksToTheRight
+                |> Array2D.toLists
+                    #|> \a -> 
+                    #    dbg 
+                    #        (a |> List.map (\a1 -> Str.joinWith a1 "") |> Str.joinWith "\n")
+                    #    a
+                |> List.walkWithIndex 0 \state1, line, index ->
+                    state1 + ((index + 1) * List.countIf line \a -> a == "O")
+            x
+        |> Array2D.rotateClockwise
+        |> runCyclesHelp state (n + 1)
+
+    else
+        input
+        
+
+
+
+calculateP1 = \input ->
+    input
+    |> Str.trim
+    |> Str.split "\n"
+    |> List.map Str.graphemes
+    |> Array2D.fromLists FitShortest
+    |> Array2D.rotateClockwise
+    |> rollRocksToTheRight
+    |> Array2D.rotateClockwise
     |> Array2D.toLists
     |> List.walkWithIndex 0 \state, line, index ->
         state + ((index + 1) * List.countIf line \a -> a == "O")
 
-rollRocksToNorth = \arrayOfRocks ->
+rollRocksToTheRight = \arrayOfRocks ->
     arrayOfRocks
-    |> Array2D.rotateClockwise
     |> Array2D.toLists
     |> List.map rollALineOfRocksToTheRight
     |> Array2D.fromLists FitShortest
-    |> Array2D.rotateClockwise
 
-# north, then west, then south, then east.
 rollALineOfRocksToTheRight = \lineOfRocks ->
     lineOfRocks
     |> List.reverse
@@ -109,6 +174,6 @@ expect
         #OO..#....
         """
 
-    result = calculate input
+    result = calculateP1 input
 
     result == 136
