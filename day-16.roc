@@ -31,9 +31,44 @@ howManyTilesAreEnergized = \input ->
         |> List.map Str.toUtf8
         |> Array2D.fromLists FitShortest
         |> Array2D.transpose
+    { dimX, dimY } = Array2D.shape array2D
 
-    loopidiloop array2D (Set.single ({ x: 0, y: 0 }, Right)) [(Ok { x: 0, y: 0 }, Right)]
+    top = 
+        List.range { start: At 0, end: Before dimX }
+        |> List.map \a ->
+            (
+                (Set.single ({ x: a, y: 0 }, Down)),
+                [(Ok { x: a, y: 0 }, Down)],
+            )
+    right = 
+        List.range { start: At 0, end: Before dimY }
+        |> List.map \a ->
+            (
+                (Set.single ({ x: dimX - 1, y: a }, Left)),
+                [(Ok { x: dimX - 1, y: a }, Left)],
+            )
+    down = 
+        List.range { start: At 0, end: Before dimX }
+        |> List.map \a ->
+            (
+                (Set.single ({ x: a, y: dimY - 1 }, Up)),
+                [(Ok { x: a, y: dimY - 1 }, Up)],
+            )
 
+    left = 
+        List.range { start: At 0, end: Before dimY }
+        |> List.map \a ->
+            (
+                (Set.single ({ x: 0, y: a }, Right)),
+                [(Ok { x: 0, y: a }, Right)],
+            )
+
+    [top, right, down, left]
+    |> List.join
+    |> List.walk 0 \state, a -> 
+        x = loopidiloop array2D a.0 a.1
+        if x > state then x else state
+        
 # Tweet out: "Python is always faster than C++"
 # Shave moustache
 # Replace all Us with Üs
@@ -41,36 +76,8 @@ howManyTilesAreEnergized = \input ->
 
 Direction : [Up, Right, Down, Left]
 
-insert : Set (Index, Direction), ([Ok Index, Yolo], Direction) -> Set (Index, Direction)
-insert = \set, a ->
-    when a.0 is
-        Ok b -> Set.insert set (b, a.1)
-        Yolo -> Set.insert set ({ x: 0, y: 0 }, a.1)
-
-color = \array2D, stack ->
-    array2D
-    |> Array2D.walk array2D { direction: Forwards } \state, a, index ->
-        if Set.contains stack index then
-            Array2D.set state index '#'
-        else
-            state
-
 loopidiloop : Array2D U8, Set (Index, Direction), List ([Ok Index, Yolo], Direction) -> Nat
 loopidiloop = \array2D, energizedTiles, stack ->
-    thething =
-        array2D
-        |> color (Set.map energizedTiles \a -> a.0)
-        |> Array2D.transpose
-        |> Array2D.toLists
-        |> List.keepOks Str.fromUtf8
-        |> Str.joinWith "\n"
-
-    dbg (List.last stack, List.len stack)
-
-    dbg Set.len energizedTiles
-
-    dbg "\n\(thething)"
-
     move = \(t, s), movements ->
         movements
         |> List.walk (t, s) \state, (i, d) ->
@@ -82,7 +89,7 @@ loopidiloop = \array2D, energizedTiles, stack ->
                         state
                     else
                         (
-                            insert state.0 (ni, d), 
+                            Set.insert state.0 (nni, d), 
                             List.append state.1 (ni, d),
                         )           
                 Yolo -> state
@@ -200,9 +207,7 @@ loopidiloop = \array2D, energizedTiles, stack ->
                     
                             loopidiloop array2D tiles newstack
 
-                x ->
-                    dbg x
-
+                _ ->
                     crash "yolo \(Num.toStr index.x), \(Num.toStr index.y))"
 
 moveInDirection : Array2D U8, Direction, Index -> [Ok Index, Yolo]
