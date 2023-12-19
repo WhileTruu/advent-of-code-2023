@@ -21,6 +21,7 @@ main =
     end <- Task.await Utc.now
 
     _ <- Task.await (Stdout.line "result \(Num.toStr result)")
+
     Stdout.line "delta \(Num.toStr (Utc.deltaAsMillis start end))"
 
 howManyTilesAreEnergized = \input ->
@@ -31,44 +32,45 @@ howManyTilesAreEnergized = \input ->
         |> List.map Str.toUtf8
         |> Array2D.fromLists FitShortest
         |> Array2D.transpose
+
     { dimX, dimY } = Array2D.shape array2D
 
-    top = 
+    top =
         List.range { start: At 0, end: Before dimX }
         |> List.map \a ->
             (
-                (Set.single ({ x: a, y: 0 }, Down)),
+                Set.single ({ x: a, y: 0 }, Down),
                 [(Ok { x: a, y: 0 }, Down)],
             )
-    right = 
+    right =
         List.range { start: At 0, end: Before dimY }
         |> List.map \a ->
             (
-                (Set.single ({ x: dimX - 1, y: a }, Left)),
+                Set.single ({ x: dimX - 1, y: a }, Left),
                 [(Ok { x: dimX - 1, y: a }, Left)],
             )
-    down = 
+    down =
         List.range { start: At 0, end: Before dimX }
         |> List.map \a ->
             (
-                (Set.single ({ x: a, y: dimY - 1 }, Up)),
+                Set.single ({ x: a, y: dimY - 1 }, Up),
                 [(Ok { x: a, y: dimY - 1 }, Up)],
             )
 
-    left = 
+    left =
         List.range { start: At 0, end: Before dimY }
         |> List.map \a ->
             (
-                (Set.single ({ x: 0, y: a }, Right)),
+                Set.single ({ x: 0, y: a }, Right),
                 [(Ok { x: 0, y: a }, Right)],
             )
 
     [top, right, down, left]
     |> List.join
-    |> List.walk 0 \state, a -> 
+    |> List.walk 0 \state, a ->
         x = loopidiloop array2D a.0 a.1
         if x > state then x else state
-        
+
 # Tweet out: "Python is always faster than C++"
 # Shave moustache
 # Replace all Us with Üs
@@ -82,21 +84,21 @@ loopidiloop = \array2D, energizedTiles, stack ->
         movements
         |> List.walk (t, s) \state, (i, d) ->
             ni = moveInDirection array2D d i
-           
+
             when ni is
                 Ok nni ->
                     if Set.contains state.0 (nni, d) then
                         state
                     else
                         (
-                            Set.insert state.0 (nni, d), 
+                            Set.insert state.0 (nni, d),
                             List.append state.1 (ni, d),
-                        )           
+                        )
+
                 Yolo -> state
-         
 
     when stack is
-        [] -> 
+        [] ->
             energizedTiles
             |> Set.walk (Set.empty {}) \state, k -> Set.insert state k.0
             |> Set.len
@@ -110,101 +112,98 @@ loopidiloop = \array2D, energizedTiles, stack ->
             # move in direction will break like if x is 0 and moving left
             when Array2D.get array2D index is
                 Ok '.' ->
-                    (tiles, newStack) = 
+                    (tiles, newStack) =
                         (energizedTiles, List.dropLast stack 1)
                         |> move [(index, direction)]
-                    
 
                     loopidiloop array2D tiles newStack
 
                 Ok '|' ->
                     if direction == Up || direction == Down then
-                        (tiles, newstack) = 
+                        (tiles, newstack) =
                             (energizedTiles, List.dropLast stack 1)
                             |> move [(index, direction)]
-                    
-                        loopidiloop array2D tiles newstack
 
+                        loopidiloop array2D tiles newstack
                     else
-                        (tiles, newstack) = 
+                        (tiles, newstack) =
                             (energizedTiles, List.dropLast stack 1)
                             |> move [(index, Up), (index, Down)]
-                    
-                        loopidiloop array2D tiles newstack
-                        
-                Ok '-' ->
-                    if direction == Left || direction == Right then
-                        (tiles, newstack) = 
-                            (energizedTiles, List.dropLast stack 1)
-                            |> move [(index, direction)]
-                    
+
                         loopidiloop array2D tiles newstack
 
+                Ok '-' ->
+                    if direction == Left || direction == Right then
+                        (tiles, newstack) =
+                            (energizedTiles, List.dropLast stack 1)
+                            |> move [(index, direction)]
+
+                        loopidiloop array2D tiles newstack
                     else
-                        (tiles, newstack) = 
+                        (tiles, newstack) =
                             (energizedTiles, List.dropLast stack 1)
                             |> move [(index, Left), (index, Right)]
-                    
+
                         loopidiloop array2D tiles newstack
 
                 Ok '\\' ->
                     when direction is
                         Up ->
-                            (tiles, newstack) = 
+                            (tiles, newstack) =
                                 (energizedTiles, List.dropLast stack 1)
                                 |> move [(index, Left)]
-                    
+
                             loopidiloop array2D tiles newstack
 
                         Right ->
-                            (tiles, newstack) = 
+                            (tiles, newstack) =
                                 (energizedTiles, List.dropLast stack 1)
                                 |> move [(index, Down)]
-                    
+
                             loopidiloop array2D tiles newstack
 
                         Down ->
-                            (tiles, newstack) = 
+                            (tiles, newstack) =
                                 (energizedTiles, List.dropLast stack 1)
                                 |> move [(index, Right)]
-                    
+
                             loopidiloop array2D tiles newstack
 
                         Left ->
-                            (tiles, newstack) = 
+                            (tiles, newstack) =
                                 (energizedTiles, List.dropLast stack 1)
                                 |> move [(index, Up)]
-                    
+
                             loopidiloop array2D tiles newstack
 
                 Ok '/' ->
                     when direction is
                         Up ->
-                            (tiles, newstack) = 
+                            (tiles, newstack) =
                                 (energizedTiles, List.dropLast stack 1)
                                 |> move [(index, Right)]
-                    
+
                             loopidiloop array2D tiles newstack
 
                         Right ->
-                            (tiles, newstack) = 
+                            (tiles, newstack) =
                                 (energizedTiles, List.dropLast stack 1)
                                 |> move [(index, Up)]
-                    
+
                             loopidiloop array2D tiles newstack
 
                         Down ->
-                            (tiles, newstack) = 
+                            (tiles, newstack) =
                                 (energizedTiles, List.dropLast stack 1)
                                 |> move [(index, Left)]
-                    
+
                             loopidiloop array2D tiles newstack
 
                         Left ->
-                            (tiles, newstack) = 
+                            (tiles, newstack) =
                                 (energizedTiles, List.dropLast stack 1)
                                 |> move [(index, Down)]
-                    
+
                             loopidiloop array2D tiles newstack
 
                 _ ->
