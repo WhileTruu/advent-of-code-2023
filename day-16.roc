@@ -71,11 +71,6 @@ howManyTilesAreEnergized = \input ->
         x = loopidiloop array2D a.0 a.1
         if x > state then x else state
 
-# Tweet out: "Python is always faster than C++"
-# Shave moustache
-# Replace all Us with Üs
-# Listen to Christmas songs
-
 Direction : [Up, Right, Down, Left]
 
 loopidiloop : Array2D U8, Set (Index, Direction), List ([Ok Index, Yolo], Direction) -> Nat
